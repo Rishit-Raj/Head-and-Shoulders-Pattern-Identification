@@ -51,7 +51,6 @@ and **inverted** (bullish) patterns.
 -   **Pattern metrics calculation**, including:
     -   Neckline slope
     -   Head width & height
-    -   Pattern R² for fit quality
 -   **Visualization** using `mplfinance` for candlestick charts
 -   **Integration with Yahoo Finance** for real market data
 -   **Support for inverted (bullish) H&S patterns**
