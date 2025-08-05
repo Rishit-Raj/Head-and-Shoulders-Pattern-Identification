@@ -1,4 +1,6 @@
-# Understanding the Head and Shoulders Pattern
+# Project: Algorithmic Technical Pattern Identification - Head and Shoulders
+
+## What is the Head and Shoulders Pattern?
 
 The Head and Shoulders (H&S) pattern is a visual chart formation used in technical analysis. It is composed of three main peaks (or troughs for an inverted pattern) and a neckline:
 
@@ -16,7 +18,7 @@ Start and End Points – Define where the pattern begins to form and where it is
 
 This pattern visually resembles a human head with two shoulders, which is where it gets its name.
 
-# Historical Performance and Ideal Usage
+## Historical Performance and Ideal Usage
 
 Success Rate: ~65–75% on daily charts of S&P 500 stocks
 
@@ -34,7 +36,7 @@ Market Type: Works best in liquid markets like the S&P 500 or large-cap stocks
 
 Confirmation: Often combined with indicators like RSI, MACD, or Volume to increase reliability
 
-# Head and Shoulders Pattern Detection
+## Understanding the project
 
 This project provides a Python implementation to **detect and analyze
 Head and Shoulders (H&S) patterns**---a classic technical analysis
@@ -64,7 +66,7 @@ and **inverted** (bullish) patterns.
 
 ------------------------------------------------------------------------
 
-# Python Modules Used
+## Python Modules Used
 
 This project uses a combination of Python modules for data processing, technical analysis, and visualization:
 
