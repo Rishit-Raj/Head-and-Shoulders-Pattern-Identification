@@ -1,4 +1,4 @@
-# Project: Algorithmic Technical Pattern Identification using Python - Head and Shoulders
+# Project 1: Algorithmic Trading Technical Pattern Identification using Python - Head and Shoulders
 
 ## What is the Head and Shoulders Pattern?
 
