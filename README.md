@@ -40,8 +40,7 @@ Confirmation: Often combined with indicators like RSI, MACD, or Volume to increa
 
 This project provides a Python implementation to **detect and analyze
 Head and Shoulders (H&S) patterns**---a classic technical analysis
-formation used in trading and investing. It supports both **standard**
-and **inverted** (bullish) patterns.
+formation used in trading and investing. It supports **standard** patterns.
 
 ## Features
 
@@ -132,9 +131,7 @@ Shoulders** formations.
 2.  **Pattern Recognition**
     -   Identifies sequences of left shoulder → head → right shoulder
         with a neckline.
-3.  **Validation**
-    -   Computes pattern `R²` to filter valid formations.
-4.  **Visualization**
+3.  **Visualization**
     -   Plots candlestick charts with overlayed patterns using
         `mplfinance`.
 
