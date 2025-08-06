@@ -175,108 +175,6 @@ def check_hs_pattern(extrema_indices: List[int], data: np.array, i:int, early_fi
 
     return pat
 
-
-def check_ihs_pattern(extrema_indices: List[int], data: np.array, i:int, early_find: bool = False) -> HSPattern:
-    
-    # Unpack list
-    l_shoulder = extrema_indices[0]
-    l_armpit = extrema_indices[1]
-    head = extrema_indices[2]
-    r_armpit = extrema_indices[3]
-    
-    if i - r_armpit < 2:
-        return None
-
-    # Find right shoulder as max price since r_armpit
-    r_shoulder = r_armpit + data[r_armpit+1: i].argmin() + 1
-
-    # Head must be lower than shoulders
-    if data[head] >= min(data[l_shoulder], data[r_shoulder]):
-        return None
-
-    # Balance rule. Shoulders are below the others midpoint.
-    # A shoulder's midpoint is the midpoint between the shoulder and armpit
-    r_midpoint = 0.5 * (data[r_shoulder] + data[r_armpit])
-    l_midpoint = 0.5 * (data[l_shoulder] + data[l_armpit])
-    if data[l_shoulder] > 1.1*r_midpoint  or data[r_shoulder] > 1.1*l_midpoint:
-        return None
-
-    # Symmetry rule. time from shoulder to head are comparable
-    r_to_h_time = r_shoulder - head
-    l_to_h_time = head - l_shoulder
-    if r_to_h_time > 2.75 * l_to_h_time or l_to_h_time > 2.75 * r_to_h_time:
-        return None
-
-    # Compute neckline
-    neck_run = r_armpit - l_armpit
-    neck_rise = data[r_armpit] - data[l_armpit]
-    neck_slope = neck_rise / neck_run
-    
-    # neckline value at current index
-    neck_val = data[l_armpit] + (i - l_armpit) * neck_slope
-    
-    # Confirm pattern when price is halfway from right shoulder
-    if early_find: 
-        if data[i] < r_midpoint:
-            return None
-    else:
-       
-        # Price has yet to break neckline, unconfirmed
-        if data[i] < neck_val:
-            return None
-   
-    # Find beginning of pattern. Neck to left shoulder
-    head_width = r_armpit - l_armpit
-    pat_start = -1
-    neck_start = -1
-    for j in range(1, head_width):
-        neck = data[l_armpit] + (l_shoulder - l_armpit - j) * neck_slope
-        
-        if l_shoulder - j < 0:
-            return None
-        
-        if data[l_shoulder - j] > neck:
-            pat_start = l_shoulder - j
-            neck_start = neck
-            break
-
-    if pat_start == -1:
-        return None
-
-    # Pattern confirmed if here :)
-    pat = HSPattern(inverted=True)  
-    
-    pat.l_shoulder = l_shoulder
-    pat.r_shoulder = r_shoulder
-    pat.l_armpit = l_armpit
-    pat.r_armpit = r_armpit
-    pat.head = head
-    
-    pat.l_shoulder_p = data[l_shoulder]
-    pat.r_shoulder_p = data[r_shoulder]
-    pat.l_armpit_p = data[l_armpit]
-    pat.r_armpit_p = data[r_armpit]
-    pat.head_p = data[head]
-
-    pat.start_i = pat_start
-    pat.break_i = i
-    pat.break_p = data[i]
-
-    pat.neck_start = neck_start
-    pat.neck_end = neck_val
-    pat.pattern_r2 = compute_pattern_r2(data, pat)
-    
-    pat.neck_slope = neck_slope
-    pat.head_width = head_width
-    pat.head_height = (data[l_armpit] + (head - l_armpit) * neck_slope) - data[head]
-    pat.pattern_r2 = compute_pattern_r2(data, pat)
-    
-    #if pat.pattern_r2 < 0.0:
-    #    return None
-
-    return pat
-
-
 def find_hs_patterns(data: np.array, order:int, early_find:bool = False):
     assert(order >= 1)
     
@@ -289,16 +187,12 @@ def find_hs_patterns(data: np.array, order:int, early_find:bool = False):
 
     # Lock variables to prevent finding the same pattern multiple times
     hs_lock = False
-    ihs_lock = False
-
-    ihs_patterns = [] # Inverted (bullish)
     hs_patterns = []  # Regular (bearish)
     for i in range(len(data)):
 
         if rw_top(data, i, order):
             recent_extrema.append(i - order)
             recent_types.append(1)
-            ihs_lock = False
             last_is_top = True
         
         if rw_bottom(data, i, order):
@@ -311,37 +205,21 @@ def find_hs_patterns(data: np.array, order:int, early_find:bool = False):
             continue
         
         hs_alternating = True
-        ihs_alternating = True
         
         if last_is_top:
-            for j in range(2, 5):
-                if recent_types[j] == recent_types[j - 1]: 
-                    ihs_alternating = False
-            
             for j in range(1, 4):
                 if recent_types[j] == recent_types[j - 1]: 
                     hs_alternating = False
             
-            ihs_extrema = list(recent_extrema)[1:5]
             hs_extrema = list(recent_extrema)[0:4]
         else:
             
             for j in range(2, 5):
                 if recent_types[j] == recent_types[j - 1]: 
                     hs_alternating = False
-            
-            for j in range(1, 4):
-                if recent_types[j] == recent_types[j - 1]: 
-                    ihs_alternating = False
-            
-            ihs_extrema = list(recent_extrema)[0:4]
-            hs_extrema = list(recent_extrema)[1:5]
         
-        if ihs_lock or not ihs_alternating:
-            ihs_pat = None
-        else:
-            ihs_pat = check_ihs_pattern(ihs_extrema, data, i, early_find)
-
+            hs_extrema = list(recent_extrema)[1:5]
+    
         if hs_lock or not hs_alternating:
             hs_pat = None
         else:
@@ -350,12 +228,8 @@ def find_hs_patterns(data: np.array, order:int, early_find:bool = False):
         if hs_pat is not None:
             hs_lock = True
             hs_patterns.append(hs_pat)
-        
-        if ihs_pat is not None:
-            ihs_lock = True
-            ihs_patterns.append(ihs_pat)
-
-    return hs_patterns, ihs_patterns
+    
+    return hs_patterns
 
 
 def get_pattern_return(data: np.array, pat: HSPattern, log_prices: bool = True) -> float:
@@ -393,14 +267,11 @@ def get_pattern_return(data: np.array, pat: HSPattern, log_prices: bool = True) 
             return (-1 * (exit_price - entry_price) / entry_price)
         
 
-def TestPattern(data, hs_patterns, ihs_patterns, hs_df, ihs_df):
+def TestPattern(data, hs_patterns, hs_df):
     initial_capitalHS = 100000
-    initial_capitalIHS = 100000
 
     positiveHSreturns = []
     negativeHSreturns = []
-    positiveIHSreturns = []
-    negativeIHSreturns = []
 
     # Load pattern attributes into dataframe
     for i, hs in enumerate(hs_patterns):
@@ -415,22 +286,6 @@ def TestPattern(data, hs_patterns, ihs_patterns, hs_df, ihs_df):
         else:
             ret = -1 * (dat_slice[hs.break_i + hp] - dat_slice[hs.break_i])
             hs_df.loc[i, 'hold_return'] = ret
-    
-    # Load pattern attributes into dataframe
-    for i, hs in enumerate(ihs_patterns):
-        ihs_df.loc[i, 'head_width'] = hs.head_width
-        ihs_df.loc[i, 'head_height'] = hs.head_height
-        ihs_df.loc[i, 'r2'] = hs.pattern_r2
-        ihs_df.loc[i, 'neck_slope'] = hs.neck_slope
-        
-        hp = int(hs.head_width)
-        if hs.break_i + hp >= len(data):
-            ihs_df.loc[i, 'hold_return'] = np.nan
-        else:
-            ret = dat_slice[hs.break_i + hp] - dat_slice[hs.break_i]
-            ihs_df.loc[i, 'hold_return'] = ret
-        
-        ihs_df.loc[i, 'stop_return'] = get_pattern_return(dat_slice, hs)
 
     capitalListHS = []
 
@@ -445,35 +300,17 @@ def TestPattern(data, hs_patterns, ihs_patterns, hs_df, ihs_df):
 
     finalCapitalHS = capitalListHS[-1]
 
-    capitalListIHS = []
-
-    for i in range(len(hs_df)):
-        initial_capitalIHS = initial_capitalIHS * (1 + ihs_df.loc[i, 'hold_return'])
-        capitalListIHS.append(initial_capitalIHS)
-        if ihs_df.loc[i, 'hold_return'] >= 0:
-            positiveIHSreturns.append(100*ihs_df.loc[i, 'hold_return'])
-        else:
-            negativeIHSreturns.append(100*ihs_df.loc[i, 'hold_return'])
-
-    finalCapitalIHS = capitalListIHS[-1]
-
     print()
     print()
     print(f'This is the return made by head and shoulders patterns: {((finalCapitalHS/100000) - 1)*100}%')
     print()
-    print(f'This is the return made by inverted head and shoulders patterns: {((finalCapitalIHS/100000) - 1)*100}%')
-    print()
 
     win_rateHS = (len(positiveHSreturns)/((len(positiveHSreturns) + len(negativeHSreturns)))) * 100
-    win_rateIHS = (len(positiveIHSreturns)/((len(positiveIHSreturns) + len(negativeIHSreturns)))) * 100
 
     avgWinHS = sum(positiveHSreturns)/len(positiveHSreturns)
     avgLossHS = sum(negativeHSreturns)/len(negativeHSreturns)
 
-    avgWinIHS = sum(positiveIHSreturns)/len(positiveIHSreturns)
-    avgLossIHS = sum(negativeIHSreturns)/len(negativeIHSreturns)
-
-    return hs_df, ihs_df, finalCapitalHS, finalCapitalIHS, win_rateHS, win_rateIHS, avgLossHS, avgLossIHS, avgWinHS, avgWinIHS, max(positiveHSreturns), min(negativeHSreturns), max(positiveIHSreturns), min(negativeIHSreturns)
+    return hs_df, finalCapitalHS, win_rateHS, avgLossHS, avgWinHS, max(positiveHSreturns), min(negativeHSreturns)
 
 if __name__ == '__main__':
     data = yf.download('WMT', period='10y')
@@ -484,7 +321,7 @@ if __name__ == '__main__':
     data = np.log(data)
     dat_slice = data['close'].to_numpy()
 
-    hs_patterns, ihs_patterns = find_hs_patterns(dat_slice, 3, early_find=False)
+    hs_patterns = find_hs_patterns(dat_slice, 3, early_find=False)
 
     data['date1'] = data.index
     data['date1'] = data['date1'].astype('datetime64[s]')
@@ -495,29 +332,15 @@ if __name__ == '__main__':
             print(data.iloc[hs_patterns[i].start_i]['date1'])
     else:
         print('No head-and-shoulders patterns appeard in the last 10 years')
-        
-    if len(ihs_patterns) > 0:
-        print('These are the dates the inverted head-and-shoulders patterns appeared in the last 10 years')
-        for i in range(len(ihs_patterns)):
-            print(data.iloc[ihs_patterns[i].start_i]['date1'])
-    else:
-        print('There were no inverted head-and-shoulders patterns appeared in the last 10 years')
 
     hs_df = pd.DataFrame()
-    ihs_df = pd.DataFrame()
 
-    hs_df, ihs_df, finalCapitalHS, finalCapitalIHS, win_rateHS, win_rateIHS, avgLossHS, avgLossIHS, avgWinHS, avgWinIHS, maxWinHS, maxLossHS, maxWinIHS, maxLossIHS = TestPattern(data, hs_patterns, ihs_patterns, hs_df, ihs_df)
+    hs_df, finalCapitalHS, win_rateHS, avgLossHS, avgWinHS, maxWinHS, maxLossHS = TestPattern(data, hs_patterns, hs_df)
 
     print(f'The win rate for the HS is {win_rateHS}%')
     print(f'The average win for the HS is {avgWinHS}%')
     print(f'The average loss for the HS is {avgLossHS}%')
     print()
-    print(f'The win rate for the IHS is {win_rateIHS}%')
-    print(f'The average win for the IHS is {avgWinIHS}%')
-    print(f'The average loss for the IHS is {avgLossIHS}%')
     print()
     print(f'The maximum win for the HS is {maxWinHS}%')
     print(f'The maximum loss for the HS is {maxLossHS}%')
-    print()
-    print(f'The maximum win for the IHS is {maxWinIHS}%')
-    print(f'The maximum loss for the IHS is {maxLossIHS}%')
